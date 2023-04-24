@@ -5,7 +5,8 @@ from django.contrib import messages
 from django.db.models import Q
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
-from .models import Room, Topic
+from django.contrib.auth.forms import UserCreationForm
+from .models import Room, Topic, Message
 from .forms import RoomForm
 
 
@@ -18,18 +19,18 @@ from .forms import RoomForm
 # ]
 
 def loginPage(request):
-
+    page = 'login-page'
     if request.user.is_authenticated:
         return redirect('homepage')
 
     if request.method == 'POST':
-        username = request.POST.get('username')
+        username = request.POST.get('username').lower()
         password = request.POST.get('password')
 
-        try:
-            user = User.objects.get(username=username)
-        except:
-            messages.error(request, "User do not exit")
+        # try:
+        #     user = User.objects.get(username=username)
+        # except:
+        #     messages.error(request, "User do not exit")
         user = authenticate(request, username=username, password=password)
         
         if user is not None:
@@ -37,12 +38,29 @@ def loginPage(request):
             return redirect('homepage')
         else:
             messages.error(request, "username or password incorect")
-    context = {}
+    context = {'page':page}
     return render(request, 'base/login_register.html', context)
+
 
 def logoutPage(request):
     logout(request)
     return redirect('homepage')
+
+
+def registerPage(request):
+    form = UserCreationForm
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.username = user.username.lower()
+            user.save()
+            return redirect('homepage')
+        else:
+            messages.error(request, "An error occured during resgitration")
+
+    return render(request, 'base/login_register.html',{'form':form})
+
 
 def homepage(request):
     qp = request.GET.get('qp') if request.GET.get('qp') != None else ''
@@ -58,10 +76,20 @@ def homepage(request):
     context = {'rooms':rooms, 'topics':topics , 'room_count':room_count}
     return render(request, 'base/home.html', context)
 
+
 def room(request, pk):
     rooms = Room.objects.get(id=pk)
-    context = {'room':rooms}
+    room_messages = rooms.message_set.all().order_by('-created')
+    if request.method == "POST":
+        message = Message.objects.create(
+            user = request.user,
+            room = rooms,
+            body = request.POST.get('body')
+        )
+        return redirect('room', pk = rooms.id)
+    context = {'room':rooms, 'room_messages': room_messages}
     return render(request, 'base/room.html', context)
+
 
 @login_required(login_url='login-page')
 def createroom(request):
@@ -73,6 +101,7 @@ def createroom(request):
             return redirect('homepage')
     context = {'form':form}
     return render(request, 'base/room_form.html', context)
+
 
 @login_required(login_url='login-page')
 def updateRoom(request, pk):
@@ -88,6 +117,7 @@ def updateRoom(request, pk):
             return redirect('homepage')
     context = {'form':form}
     return render(request, 'base/room_form.html', context)
+
 
 @login_required(login_url='login-page')
 def deleteRoom(request, pk):
