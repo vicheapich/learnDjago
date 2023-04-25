@@ -9,10 +9,6 @@
         </a>
         <div class="roomListRoom__actions">
         <span>{{room.created|timesince}} ago</span>
-        {% if request.user == room.host %}
-        <a class="btn--pill" href="{% url 'update-room' room.id %}">Edit</a>
-        <a class="btn--pill" href="{% url 'delete-room' room.id %}">Delete</a>
-        {% endif %}
         </div>
     </div>
     <div class="roomListRoom__content">
