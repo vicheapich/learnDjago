@@ -185,3 +185,14 @@ def topicsPage(request):
 def activityPage(request):
     room_messages = Message.objects.all()
     return render(request, 'base/activity.html', {'room_messages': room_messages})
+
+
+@login_required(login_url='login')
+def deleteTopic(request, pk):
+    topic = Topic.objects.get(id = pk)
+    if request.user != topic.host:
+        return HttpResponse('You are not allow here!!')
+    if request.method == "POST":
+        topic.delete()
+        return redirect('homepage')
+    return render(request, 'base/delete.html', {'obj':topic})
